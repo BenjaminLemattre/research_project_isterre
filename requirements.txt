@@ -1,9 +1,6 @@
-os
-matplotlib.pyplot
-geopandas 
+matplotlib
 numpy 
 cdflib
-math 
-scipy.special
+scipy
 functools
 h5py
