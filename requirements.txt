@@ -2,5 +2,5 @@ matplotlib
 numpy 
 cdflib
 scipy
-functools
 h5py
+cartopy 
