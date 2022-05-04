@@ -9,6 +9,8 @@ cd <PATH_TO_ROOT>
 
 pip install -r requirements.txt
 
+conda install geopandas
+
 python -m notebook
 
 It will open the default Internet browser. If it is Internet Explorer or Safari, close it and copy the URL http://localhost... appearing in the Powershell and paste it to Google Chrome or Firefox
