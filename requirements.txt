@@ -1,0 +1,9 @@
+os
+matplotlib.pyplot
+geopandas 
+numpy 
+cdflib
+math 
+scipy.special
+functools
+h5py
