@@ -3,4 +3,5 @@ numpy
 cdflib
 scipy
 h5py
-cartopy 
+geopandas
+
