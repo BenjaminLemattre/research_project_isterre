@@ -1,18 +1,9 @@
 # research_project_isterre
 Repository for my research project in the laboratory ISTerre 
 
-Launch "Anaconda Powershell Prompt" application (if you use a Mac or Linux, open a terminal).
 
-Go inside the unzipped folder:
+Go to https://mybinder.org/ and copy past the url of the notebook https://github.com/BenjaminLemattre/research_project_isterre.git and choose the branch main. 
 
-cd <PATH_TO_ROOT>
+The device will create a python environnement by installing all the modules in the file requirements.txt 
 
-pip install -r requirements.txt
-
-conda install geopandas
-
-python -m notebook
-
-It will open the default Internet browser. If it is Internet Explorer or Safari, close it and copy the URL http://localhost... appearing in the Powershell and paste it to Google Chrome or Firefox
-
-Then open the relevant notebook (extension .ipynb)
+Then open the relevant notebook (extension .ipynb), it will use all the different functions in the project stored in functions.py. 
