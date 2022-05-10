@@ -527,7 +527,7 @@ def delete_nan_values_t(times_list):
 
 
 def compute_gauss_coefs_matrix(file, max_degree, N_VO, measure_MF, measure_sigma, cm_prior, unique_time_list):
-    gauss_matrix = np.zeros((max_degree(max_degree+2),len(unique_time_list)))
+    gauss_matrix = np.zeros((max_degree*(max_degree+2),len(unique_time_list)))
     j = 0
     for date in unique_time_list:
         X_column = compute_gauss_coefs_vector(file, date, max_degree, N_VO, measure_MF, measure_sigma, cm_prior)
@@ -537,4 +537,18 @@ def compute_gauss_coefs_matrix(file, max_degree, N_VO, measure_MF, measure_sigma
     return gauss_matrix
 
 
+def create_graph_compare_gauss_coefs(i, zone, unique_times, X_matrix_OB, X_matrix_CF):
+    g_ob_chosen = np.zeros(len(unique_times))
+    g_cf_chosen = np.zeros(len(unique_times))
+    for k in range(len(unique_times)): 
+        g_ob_chosen[k] = X_matrix_OB[i, k]
+        g_cf_chosen[k] = X_matrix_CF[i, k]
+    ax1 = plt.subplot(zone)
+    ax2 = plt.subplot(zone)
+    ax1.plot(unique_times, g_ob_chosen,'b', label='g_ob')
+    ax2.plot(unique_times, g_cf_chosen,'r', label='g_cf')
+    ax1.legend(fontsize='xx-large')
+    ax2.legend(fontsize='xx-large')
+    plt.grid()
+    plt.title(label='Comparison between OB and CF data in gauss coefficient %i'%i, fontsize='xx-large')
 
