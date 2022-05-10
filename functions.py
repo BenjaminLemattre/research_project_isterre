@@ -5,7 +5,6 @@ import math
 import cdflib
 import h5py
 import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
 
 r_earth = 6371.2
 r_iono = 60000
@@ -462,14 +461,13 @@ def compute_grid_positions(r, theta, phi, N):
     return pos
 
 
-def create_graph(fig, zone, list_th, list_ph, B_choice, title, levels_B):
-    ax = fig.add_subplot(zone, projection=ccrs.Robinson(central_longitude=0))
-    map_cf = ax.contourf(list_ph, list_th, B_choice, levels=levels_B(B_choice), transform=ccrs.PlateCarree(),
-                               cmap='bwr')
-    plt.colorbar(map_cf, ax=ax)
-    ax.coastlines()
-    ax.set_global()
-    ax.set_title(title)
+def create_graph(fig, zone, world, list_th, list_ph, B_choice, title):
+    levels_B = lambda B_choice: np.linspace(np.min(B_choice), np.max(B_choice), 300)
+    ax1 = fig.add_subplot(zone)
+    world.plot(ax=ax1)
+    map_cf = ax1.contourf(list_ph, list_th, B_choice, levels=levels_B(B_choice), alpha=0.3, cmap='bwr')
+    plt.colorbar(map_cf, ax=ax1)
+    ax1.set_title(title)   
 
 
 def compute_B_meshgrid(Magnetic_Field_at_time, choice, Nloc):
@@ -526,6 +524,17 @@ def delete_nan_values_t(times_list):
             print(np.isnan(times_list[k]))
             times_list = np.delete(times_list, k, axis=None)
     return times_list
+
+
+def compute_gauss_coefs_matrix(file, max_degree, N_VO, measure_MF, measure_sigma, cm_prior, unique_time_list):
+    gauss_matrix = np.zeros((max_degree(max_degree+2),len(unique_time_list)))
+    j = 0
+    for date in unique_time_list:
+        X_column = compute_gauss_coefs_vector(file, date, max_degree, N_VO, measure_MF, measure_sigma, cm_prior)
+        for k in range(len(X_column)):
+            gauss_matrix[k, j] = X_column[k]
+        j += 1
+    return gauss_matrix
 
 
 
