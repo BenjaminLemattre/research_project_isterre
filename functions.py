@@ -167,17 +167,16 @@ def secondDerivativeThetaAssocLegendrePoly(n, m, theta):
     return Plm * ((-1) ** m) / (np.sin(theta) ** 2)
 
 
-def compute_MF_at_loc(r, th, ph, gauss_coefs, index_temps: int, max_degree = 20):
-    H = compute_direct_obs_operator([r, th, ph], max_degree)
-    B = np.dot(H, gauss_coefs[index_temps][0][0])
-    return B[0], B[1], B[2]
-
 
 def compute_grid_positions(r, theta, phi, N):
     """
+    params:
     r: radius in km
     theta: list of colatitude in deg
     phi: list of longitudes in deg
+    N: number of colatitudes/longitudes in the grid
+    return:
+    list of lengh 3*N^2 positions [r, th1, ph1, r, th1, ph2 ...]
     """
     pos = []
     for i in range(N):
@@ -193,6 +192,15 @@ def schmidt_semi_normalized_plm(n, m, th):
 
 
 def compute_list_coords_obs_at_t(d, data, times_list, N_VO):
+    """
+    params:
+    d: date chosen
+    data: dict of data from file
+    times_list: list of times from the dict data
+    N_VO: number of observatories
+    return: 
+    list of coords of observatories of lengh 3*N_VO [r1, th1, ph1, r2 ...]
+    """
     index_t = np.argwhere(times_list == np.datetime64(d))[0][0]
     slice_at_time = slice(N_VO*index_t, N_VO*(index_t + 1))
     radius_list_at_t = data['Radius'][slice_at_time] / 1000
@@ -209,7 +217,7 @@ def compute_list_coords_obs_at_t(d, data, times_list, N_VO):
 def compute_cov_matrix_obs_at_t(list_sigma):
     """
     Takes the list of standard deviation errors at locations and form a
-    covariance matrix N_obs x N_obs
+    covariance matrix N_VO x N_VO
     """
     cm_obs = np.zeros((len(list_sigma), len(list_sigma)))
     for k in range(0, len(list_sigma), 3):
@@ -220,6 +228,16 @@ def compute_cov_matrix_obs_at_t(list_sigma):
 
 
 def compute_obs_vector_at_t(data, d, N_VO, key, times_list):
+    """
+    params:
+    data: dict of data from file
+    d: date chosen 
+    N_VO: number of observatories
+    key: key chosen from data
+    times_list: times list from data 
+    returns: 
+    observations vector with shape(N_VO,3) [[BR1, Bth1, Bph1],[BR2, Bth2, Bph2]...]
+    """
     index_t = np.argwhere(times_list == np.datetime64(d))[0][0]
     obs = data[key][N_VO*index_t:N_VO*(index_t + 1), :]
     obs_vec = []
@@ -231,6 +249,14 @@ def compute_obs_vector_at_t(data, d, N_VO, key, times_list):
 
 
 def delete_nan_values(observations, positions, list_sigma):
+    """
+    params: 
+    observations: list of MF observations of lengh 3*N_VO
+    positions: list of observatories positions of lengh 3*N_VO
+    list_sigma: list of sigma of lengh 3*N_VO
+    returns:
+    observations, positions, list_sigma with nan values deleted
+    """
     for k in range(len(observations)-1, -1, -3):
         L = [np.isnan(observations[k]), np.isnan(observations[k-1]), np.isnan(observations[k-2])]
         if np.any(np.array(L)):
@@ -241,6 +267,18 @@ def delete_nan_values(observations, positions, list_sigma):
 
 
 def compute_gauss_coefs_vector(file, date_chosen, max_degree, N_VO, measure_MF, measure_sigma, cm_prior):
+    """
+    params: 
+    file: file chosen (swarm for instance, with os.path.join and cdf_dir)
+    date_chosen: date chosen
+    max_degree: max degree chosen
+    N_VO: number of observatories
+    measure_MF: list of MF observations with lengh 3*N_VO
+    measure_sigma: list of sigma with lengh 3*N_VO
+    cm_prior: prior covariance matrix with shape (3*N_VO^2, 3*N_VO^2)
+    returns:
+    gauss coefficient vector computed with the parameters chosen
+    """
     cdf_read = cdflib.CDF(file)
     info = cdf_read.cdf_info()
     zvars = info['zVariables']
@@ -427,23 +465,15 @@ def slice_for_obs_ids(cdf_filename, radius=False):
 
 
 def compute_unique_times_list(times_list):
+    """
+    params: times list from data 
+    returns: unique time list of data observations
+    """
     list_t = []
     for t in times_list:
         if t not in list_t:
             list_t.append(t)
     return list_t
-
-
-with h5py.File('donnees/CHAOS-7.hdf5') as file:
-    #  print(file.keys())
-    gauss_coeffs = np.array(file['gnm'])
-    times_chaos = np.array(file['times'])
-
-
-def compute_MF_at_loc(r, th, ph, gauss_coefs, index_temps: int, max_degree = 20):
-    H = compute_direct_obs_operator([r, th, ph], max_degree)
-    B = np.dot(H, gauss_coefs[index_temps][0][0])
-    return B[0], B[1], B[2]
 
 
 def compute_grid_positions(r, theta, phi, N):
@@ -462,6 +492,13 @@ def compute_grid_positions(r, theta, phi, N):
 
 
 def create_graph(fig, zone, world, list_th, list_ph, B_choice, title):
+    """
+    params: 
+    fig: figure
+    zone: zone for subplot
+    world: map of the world with geopandas
+    list_th, list_ph: array of colatitudes/ longitudes previously meshed with lengh (N^2,N^2)
+    """
     levels_B = lambda B_choice: np.linspace(np.min(B_choice), np.max(B_choice), 300)
     ax1 = fig.add_subplot(zone)
     world.plot(ax=ax1)
@@ -488,21 +525,16 @@ def compute_B_meshgrid(Magnetic_Field_at_time, choice, Nloc):
     return B_meshgrid
 
 
-def plot_simple_func(ax, latitudes, longitudes, func_test, N, levels_B):
-    simple_func = np.zeros((N, N))
-    for i in range(N):
-        for j in range(N):
-            if func_test == 0:
-                simple_func[i][j] = latitudes[i]
-            elif func_test == 1:
-                simple_func[i][j] = longitudes[j]
-            else:
-                simple_func[i][j] = latitudes[i] + longitudes[j]
-    map_cf4 = ax.contourf(longitudes, latitudes, simple_func, levels=levels_B(simple_func), transform=ccrs.PlateCarree())
-    plt.colorbar(map_cf4, ax=ax)
-
-
 def compute_B(pos, N_loc, max_degree, X):
+    """
+    params: 
+    pos: list of positions with lengh 3*N_loc^2 (radius, colatitude, longitudes)
+    N_loc: number of colatitude/longitude for the grid 
+    max_degree: max_degree chosen
+    X: gauss coefficient vector computed with previous parameters
+    returns:
+    estimated list of MF at lengh 3*N_loc^2
+    """
     MF = np.zeros(3 * N_loc * N_loc)
     for k in range(0, len(pos), 3):
         H = compute_direct_obs_operator([pos[k], np.deg2rad(90) - pos[k + 1], pos[k + 2]], max_degree)
@@ -511,7 +543,14 @@ def compute_B(pos, N_loc, max_degree, X):
     return MF
 
 
-def compute_MF_list(Magnetic_field, choice):
+def extract_MF_list(Magnetic_field, choice):
+    """
+    params: 
+    Magnetic_field: list of magnetic field from data
+    choice: choice of component to extract
+    returns: 
+    list of magnetic field according to component chosen with lengh N_VO
+    """
     B_choice = []
     for k in range(len(Magnetic_field)):
         B_choice.append(Magnetic_field[k][choice])
@@ -519,6 +558,12 @@ def compute_MF_list(Magnetic_field, choice):
 
 
 def delete_nan_values_t(times_list):
+    """
+    params: 
+    times_list: list of times from data
+    returns: 
+    times_list with nan values deleted
+    """
     for k in range(len(times_list)-1, -1):
         if math.isnan(times_list[k]):
             print(np.isnan(times_list[k]))
@@ -527,6 +572,10 @@ def delete_nan_values_t(times_list):
 
 
 def compute_gauss_coefs_matrix(file, max_degree, N_VO, measure_MF, measure_sigma, cm_prior, unique_time_list):
+    """
+    params: same of compute_gauss_coefs_vector apart from date
+    returns: gauss coefficients matrix with shape(max_degree*(max_degree+2), len(unique_time_list))
+    """
     gauss_matrix = np.zeros((max_degree*(max_degree+2),len(unique_time_list)))
     j = 0
     for date in unique_time_list:
@@ -538,6 +587,16 @@ def compute_gauss_coefs_matrix(file, max_degree, N_VO, measure_MF, measure_sigma
 
 
 def create_graph_compare_gauss_coefs(i, zone, unique_times, X_matrix_OB, X_matrix_CF):
+    """
+    params: 
+    i: choice of the index of gauss coefficient to plot
+    zone: zone to subplot
+    unique_times: unique times list from our file
+    X_matrix_OB: gauss coefficients matrix computed with data 'B_OB'
+    X_matrix_CF: gauss coefficients matrix computed with data 'B_CF'
+    returns:
+    graph comparing the gauss coefficients calculated with 'B_OB' and 'B_CF' chosen
+    """
     g_ob_chosen = np.zeros(len(unique_times))
     g_cf_chosen = np.zeros(len(unique_times))
     for k in range(len(unique_times)): 
