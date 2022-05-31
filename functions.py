@@ -476,6 +476,12 @@ def compute_unique_times_list(times_list):
     return list_t
 
 
+def compute_MF_at_loc(r, th, ph, gauss_coefs, index_temps: int, max_degree = 20):
+    H = compute_direct_obs_operator([r, th, ph], max_degree)
+    B = np.dot(H, gauss_coefs)
+    return B[0], B[1], B[2]
+
+
 def compute_grid_positions(r, theta, phi, N):
     """
     r: radius in km
@@ -611,3 +617,43 @@ def create_graph_compare_gauss_coefs(i, zone, unique_times, X_matrix_OB, X_matri
     plt.grid()
     plt.title(label='Comparison between OB and CF data in gauss coefficient %i'%i, fontsize='xx-large')
 
+def create_hist(fig, i, zone, alldata, L_max, unique_times_list, date, file, cm_prior, title):
+    N_VO = 300
+    index_temps = np.argwhere((cdf_times_to_np_date(alldata['Timestamp'])) == np.datetime64(date))[0][0]
+    radius = alldata['Radius'][index_temps:index_temps+N_VO]*10**(-3)
+    latitudes = alldata['Latitude'][index_temps:index_temps+N_VO]
+    longitudes = alldata['Longitude'][index_temps:index_temps+N_VO]
+    r, th, ph, list_coords_obs = compute_list_coords_obs_at_t(date, alldata, unique_times_list, N_VO)
+    B_CF_real_choice = extract_MF_list(alldata['B_CF'][index_temps:index_temps+N_VO], i)
+    list_sigma_choice = extract_MF_list(alldata['sigma_CF'][index_temps:index_temps+N_VO], i)
+    
+    X_CF = compute_gauss_coefs_vector(file, date, L_max, N_VO, 'B_CF', 'sigma_CF', cm_prior)
+    H = compute_direct_obs_operator(list_coords_obs, L_max)
+    B_CF_estimated = H @ X_CF
+
+    B_CF_estimated_choice = np.zeros(N_VO)
+    for k in range(N_VO): 
+        B_CF_estimated_choice[k] = B_CF_estimated[i+3*k]
+    B_CF_diff_choice = np.zeros(N_VO)
+    for k in range(N_VO):
+        B_CF_diff_choice[k] = (B_CF_real_choice[k] - B_CF_estimated_choice[k]) / list_sigma_choice[k]
+    B_CF_real_choice, B_CF_estimated_choice, list_sigma_choice = delete_nan_values(B_CF_real_choice, B_CF_estimated_choice, list_sigma_choice)
+    m = sum(B_CF_real_choice - B_CF_estimated_choice)/len(B_CF_real_choice - B_CF_estimated_choice)
+    
+    list_index = []
+    for k in range(len(B_CF_real_choice)):
+        if abs(B_CF_real_choice[k] - B_CF_estimated_choice[k]) >3:
+            list_index.append(k)
+    print('> number of value too far in component %i : '%i, len(list_index))
+    i = 0
+    for k in range(len(list_index)):
+        if abs(latitudes[list_index[k]]) > 50:
+            i+=1
+    print('> number of those values with |lats| > 60 : ', i)
+            
+
+    ## Lines plotting the geomagnetic field 
+    ax1=fig.add_subplot(zone)
+    ax1.set_title(title)
+    ax1.hist(B_CF_diff_choice, bins=50, label='mean value = %1.4f'%m)
+    ax1.legend()
